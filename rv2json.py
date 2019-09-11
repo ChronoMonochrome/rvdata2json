@@ -1,6 +1,15 @@
 import json
 import yaml
 from rubymarshal.reader import loads
+from rubymarshal.classes import RubyObject
+
+def _serialize_obj(converted_obj, orig_obj):
+	if type(orig_obj) != RubyObject:
+		obj_type_name = orig_obj.__class__.__name__
+	else:
+		obj_type_name = orig_obj.ruby_class_name
+
+	return {"val": converted_obj, "type": obj_type_name}
 
 class RVDataFile:
 	_data = {}
@@ -26,10 +35,6 @@ class RVDataFile:
 		with open(output_file, 'w') as f:
 			yaml.dump(data, f, default_flow_style=False)
 
-
-	def _serialize_obj(self, obj, type_):
-		return {"val": obj, "type": type_.__name__}
-
 	def _rvdata2dict(self, rvdata_obj):
 		res = {}
 
@@ -54,24 +59,21 @@ class RVDataFile:
 			inner_obj_type = type(inner_obj)
 
 			if not hasattr(inner_obj, "attributes") and not inner_obj_type in [dict, list]:
+				converted_obj = inner_obj
 				if inner_obj_type == bytes:
-					inner_obj = repr(inner_obj)
+					converted_obj = repr(inner_obj)
 
 				if type(child_nodes) != list:
-					res[attr] = self._serialize_obj(inner_obj, inner_obj_type)
-					#res[attr] = inner_obj
+					res[attr] = _serialize_obj(converted_obj, inner_obj)
 				else:
-					#res.append(inner_obj)
-					res.append(self._serialize_obj(inner_obj, inner_obj_type))
+					res.append(_serialize_obj(converted_obj, inner_obj))
 				continue
 
 			converted_obj = self._rvdata2dict(inner_obj)
 
 			if type(child_nodes) != list:
-				res[attr] = self._serialize_obj(converted_obj, inner_obj_type)
-				#res[attr] = converted_obj
+				res[attr] = _serialize_obj(converted_obj, inner_obj)
 			else:
-				res.append(self._serialize_obj(converted_obj, inner_obj_type))
-				#res.append(converted_obj)
+				res.append(_serialize_obj(converted_obj, inner_obj))
 
-		return res
+		return _serialize_obj(res, rvdata_obj)
