@@ -39,8 +39,6 @@ class Table:
 			table_row = struct.unpack("%dH" % self.x, fd.read(self.tile_size * self.x))
 			self.data.append(table_row)
 
-		self.fd = io.BytesIO(table_obj._private_data)
-
 	def serialize(self):
 		obj = {}
 		obj["dim"] = self.dim
