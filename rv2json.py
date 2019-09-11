@@ -18,7 +18,7 @@ class RVDataFile:
 		pass
 
 	def from_rvdata(self, input_file):
-		self._data = loads(open(input_file, "rb").read())
+		self._data = self._rvdata2dict(loads(open(input_file, "rb").read()))
 
 	def from_json(self, input_file):
 		pass
@@ -27,13 +27,12 @@ class RVDataFile:
 		pass
 
 	def to_json(self, output_file):
-		json_data = json.dumps(self._rvdata2dict(self._data), indent=4, sort_keys=True)
+		json_data = json.dumps(self._data, indent=4, sort_keys=True)
 		open(output_file, "w").write(json_data)
 
 	def to_yaml(self, output_file):
-		data = self._rvdata2dict(self._data)
 		with open(output_file, 'w') as f:
-			yaml.dump(data, f, default_flow_style=False)
+			yaml.dump(self._data, f, default_flow_style=False)
 
 	def _rvdata2dict(self, rvdata_obj):
 		res = {}
