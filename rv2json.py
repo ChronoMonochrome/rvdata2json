@@ -53,7 +53,7 @@ class Table:
 		for k in obj:
 			obj[k] = _serialize_obj(obj[k], obj[k])
 
-		return _serialize_obj(obj, self.table_obj)
+		return obj
 
 class RVDataFile:
 	_data = {}
@@ -78,7 +78,7 @@ class RVDataFile:
 		with open(output_file, 'w') as f:
 			yaml.dump(self._data, f, default_flow_style=False)
 
-	def _rvdata2dict(self, rvdata_obj):
+	def _rvdata2dict(self, rvdata_obj, serialize = True):
 		res = {}
 
 		if not hasattr(rvdata_obj, "attributes") and type(rvdata_obj) not in [dict, list]:
@@ -116,11 +116,14 @@ class RVDataFile:
 				table = Table(inner_obj)
 				converted_obj = table.serialize()
 			else:
-				converted_obj = self._rvdata2dict(inner_obj)
+				converted_obj = self._rvdata2dict(inner_obj, serialize = False)
 
 			if type(child_nodes) != list:
 				res[attr] = _serialize_obj(converted_obj, inner_obj)
 			else:
 				res.append(_serialize_obj(converted_obj, inner_obj))
 
-		return _serialize_obj(res, rvdata_obj)
+		if serialize:
+			return _serialize_obj(res, rvdata_obj)
+		else:
+			return res
