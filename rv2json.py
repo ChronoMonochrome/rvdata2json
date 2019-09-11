@@ -1,7 +1,9 @@
+import io
+import struct
 import json
 import yaml
 from rubymarshal.reader import loads
-from rubymarshal.classes import RubyObject
+from rubymarshal.classes import RubyObject, UserDef
 
 def _serialize_obj(converted_obj, orig_obj):
 	if type(orig_obj) != RubyObject:
@@ -10,6 +12,48 @@ def _serialize_obj(converted_obj, orig_obj):
 		obj_type_name = orig_obj.ruby_class_name
 
 	return {"val": converted_obj, "type": obj_type_name}
+
+class Table:
+	tile_size = 2
+
+	dim = 0
+	x = 0
+	y = 0
+	z = 0
+	unknown = 0
+	data = []
+
+	def __init__(self, table_obj):
+		self.table_obj = table_obj
+
+		fd = io.BytesIO(table_obj._private_data)
+		self.dim = struct.unpack("i", fd.read(4))[0]
+		self.x = struct.unpack("i", fd.read(4))[0]
+		self.y = struct.unpack("i", fd.read(4))[0]
+		self.z = struct.unpack("i", fd.read(4))[0]
+		self.unknown = struct.unpack("i", fd.read(4))[0]
+		
+		table_row = []
+		row_size = self.tile_size * self.x
+		for _ in range(self.y * self.z):
+			table_row = struct.unpack("%dH" % self.x, fd.read(self.tile_size * self.x))
+			self.data.append(table_row)
+
+		self.fd = io.BytesIO(table_obj._private_data)
+
+	def serialize(self):
+		obj = {}
+		obj["dim"] = self.dim
+		obj["x"] = self.x
+		obj["y"] = self.y
+		obj["z"] = self.z
+		obj["unknown"] = self.unknown
+		obj["data"] = self.data
+
+		for k in obj:
+			obj[k] = _serialize_obj(obj[k], obj[k])
+
+		return _serialize_obj(obj, self.table_obj)
 
 class RVDataFile:
 	_data = {}
@@ -68,7 +112,11 @@ class RVDataFile:
 					res.append(_serialize_obj(converted_obj, inner_obj))
 				continue
 
-			converted_obj = self._rvdata2dict(inner_obj)
+			if type(inner_obj) == UserDef and inner_obj.ruby_class_name == "Table":
+				table = Table(inner_obj)
+				converted_obj = table.serialize()
+			else:
+				converted_obj = self._rvdata2dict(inner_obj)
 
 			if type(child_nodes) != list:
 				res[attr] = _serialize_obj(converted_obj, inner_obj)
